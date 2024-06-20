@@ -1,25 +1,27 @@
 import kotlin.random.Random
 
-const val MINE = "$"
+const val MINE = "X"
 const val SAFE = "."
 
 fun main() {
-    var height = 7
-    var width = 7
-    val random = Random.nextBoolean()
+    var height = 9
+    var width = 9
+    println("How many mines do you want on the field?")
+    val numMines = readln().toInt()
+    //val random = Random.nextBoolean()
     val grid = List(height){ MutableList<String>(width){
-        if (Random.nextBoolean()) MINE else SAFE}
+        SAFE}
     }
-
-    // first attempt to print grid -- prints whole sequence multiple times
-//    val sequence = grid.flatten().joinToString("").asSequence()
-//    repeat(height) {
-//        println(sequence.chunked(width).toList().joinToString(""))
-//    }
-
-// second attempt to print grid -- straightforward
+    var xCount = 0
+    while (xCount < numMines){
+        val targetCellX = Random.nextInt(0, 9)
+        val targetCellY = Random.nextInt(0, 9)
+        if (grid[targetCellX][targetCellY] != MINE) {
+            grid[targetCellX][targetCellY] = MINE
+            xCount++
+        }
+    }
     for (row in grid) {
         println(row.joinToString(""))
     }
-
 }
