@@ -19,7 +19,7 @@ enum class Status(var value: String) {
 }
 
 class Minesweeper {
-data class Cell( var status: Status) {
+data class Cell(val row: Int, val col: Int, var status: Status) {
     override fun equals(other: Any?): Boolean {
         if (other !is Cell) return false
         return other.status == this.status
@@ -35,8 +35,8 @@ data class Cell( var status: Status) {
 }
     val height = DIMEN
     val width = DIMEN
-    val grid = List(height){ MutableList<Cell>(width){
-        Cell(Status.SAFE_CELL)}
+    val grid = List(height){ row -> MutableList<Cell>(width){
+        col -> Cell(row + 1, col + 1, Status.SAFE_CELL)}
     }
     var playerGrid : List<MutableList<Cell>>? = null
     fun launchGame() {
@@ -133,7 +133,7 @@ data class Cell( var status: Status) {
                     }
                 }
                 if (grid[i][j].status != Status.REVEALED_MINE && counterMines > 0) {
-                    val outputCell = Cell(Status.MINE_ADJ_CELL)
+                    val outputCell = Cell(i + 1, j + 1, Status.MINE_ADJ_CELL)
                     outputCell.status.value = counterMines.toString()
                     grid[i][j] = outputCell
                 }
