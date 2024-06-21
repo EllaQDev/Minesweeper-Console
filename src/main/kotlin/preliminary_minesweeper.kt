@@ -1,8 +1,6 @@
 import kotlin.random.Random
 
-const val MINE = "X"
-const val SAFE = "."
-const val DIMEN = 9
+
 fun main() {
     var height = DIMEN
     var width = DIMEN
