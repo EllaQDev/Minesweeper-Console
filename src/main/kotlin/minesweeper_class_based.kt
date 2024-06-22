@@ -19,18 +19,18 @@ enum class Status(var value: String) {
 }
 
 class Minesweeper {
-data class Cell(val row: Int, val col: Int, var status: Status) {
+data class Cell(val row: Int, val col: Int, var status: Status, var adjMines : Int = 0) {
     override fun equals(other: Any?): Boolean {
         if (other !is Cell) return false
-        return other.status == this.status
+        return other.status == this.status && other.row == this.row && other.col == this.col
     }
 
     override fun hashCode(): Int {
-        return status.ordinal.hashCode() * 7 + 13 + status.value.hashCode() * 7 + 13
+        return status.ordinal.hashCode() * 7 + 13 + status.value.hashCode() * 7 + 13 + row + col
     }
 
     override fun toString(): String {
-        return status.value
+        return if (status != Status.MINE_ADJ_CELL) status.value else adjMines.toString()
     }
 }
     val height = DIMEN
@@ -39,6 +39,7 @@ data class Cell(val row: Int, val col: Int, var status: Status) {
         col -> Cell(row + 1, col + 1, Status.SAFE_CELL)}
     }
     var playerGrid : List<MutableList<Cell>>? = null
+    var won = false
     fun launchGame() {
         val numMines = promptNumMines()
         createMines(numMines)
@@ -46,8 +47,31 @@ data class Cell(val row: Int, val col: Int, var status: Status) {
         //printGMGrid()
         createPlayerGrid()
         printPlayerGrid()
+        while(!won) {
+            promptUser()
+        }
+        println("Congratulations! You found all the mines!")
     }
 
+    fun promptUser() {
+        println("Set/delete mine marks (x and y coordinates):")
+        val input = readln().split(" ")
+        val col = input[0].toInt()
+        val row = input[1].toInt()
+        //val currStatus = playerGrid!![row - 1][col - 1].status
+        if (grid[row - 1][col - 1].status == Status.MINE_ADJ_CELL) {
+            println("There is a number here!")
+            return
+        } else {
+            if (playerGrid!![row - 1][col - 1].status != Status.MARKED_MINE) {
+                playerGrid!![row - 1][col - 1].status = Status.MARKED_MINE
+            } else {
+                playerGrid!![row - 1][col - 1].status = Status.SAFE_CELL
+            }
+            printPlayerGrid()
+        }
+        won = checkWinCondition()
+    }
     fun promptNumMines(): Int {
         println("How many mines do you want on the field?")
         return readln().toInt()
@@ -59,6 +83,7 @@ data class Cell(val row: Int, val col: Int, var status: Status) {
             val targetCellY = Random.nextInt(0, 9)
             if (grid[targetCellX][targetCellY].status != Status.REVEALED_MINE) {
                 grid[targetCellX][targetCellY].status = Status.REVEALED_MINE
+                //println(grid[targetCellX][targetCellY].status)
                 xCount++
             }
         }
@@ -133,18 +158,29 @@ data class Cell(val row: Int, val col: Int, var status: Status) {
                     }
                 }
                 if (grid[i][j].status != Status.REVEALED_MINE && counterMines > 0) {
-                    val outputCell = Cell(i + 1, j + 1, Status.MINE_ADJ_CELL)
-                    outputCell.status.value = counterMines.toString()
-                    grid[i][j] = outputCell
+                    //println(counterMines)
+//                    val outputCell =
+//                    outputCell.status.value = counterMines.toString()
+//                    println("$outputCell ${outputCell.col} ${outputCell.row}")
+                    grid[i][j] = Cell(i + 1, j + 1, Status.MINE_ADJ_CELL, counterMines)
+//                    grid[i][j].status.value = counterMines.toString()
+//                    println(counterMines)
                 }
             }
         }
     }
     fun createPlayerGrid(){
-        playerGrid = grid
+        playerGrid = grid.map { row ->
+            row.map {
+                it.copy()
+            }.toMutableList()
+        }
+        //printPlayerGrid()
         playerGrid!!.forEach { it.forEach {
             if (it.status == Status.REVEALED_MINE) {it.status = Status.HIDDEN_MINE}
         }}
+        //printPlayerGrid()
+        //printGMGrid()
     }
 
     fun printGMGrid() {
@@ -153,10 +189,27 @@ data class Cell(val row: Int, val col: Int, var status: Status) {
         }
     }
     fun printPlayerGrid() {
+        //playerGrid!!.forEach {it.forEach { println( "${it.status.value} ${it.col} ${it.row}")} }
         println(" |123456789|")
-        println("_|_________|")
+        println("-|---------|")
         for ((i,row) in playerGrid!!.withIndex()) {
             println("${i+1}|${row.joinToString("")}|")
         }
+        println("-|---------|")
+    }
+
+    fun checkWinCondition(): Boolean {
+        val allMines = grid.flatten().filter { it.status == Status.REVEALED_MINE}
+        // println(allMines)
+        val markedMines = playerGrid!!.flatten().filter { it.status == Status.MARKED_MINE }
+        // println(markedMines)
+        if (allMines.count() != markedMines.count()) return false
+        val allCoords = allMines.map { it.col to it.row}
+        val markedCoords = markedMines.map { it.col to it.row}
+        // println("allCoords: $allCoords")
+        // println("markedCoords: $markedCoords")
+        if (allCoords == markedCoords) return true
+        return false
     }
 }
+
