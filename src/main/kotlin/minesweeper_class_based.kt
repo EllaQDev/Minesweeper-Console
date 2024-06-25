@@ -4,6 +4,7 @@ const val MINE = "X"
 const val SAFE = "."
 const val MARKER = "*"
 const val DIMEN = 9
+const val HASH = "/"
 
 fun main() {
     val minesweeper = Minesweeper()
@@ -15,7 +16,9 @@ enum class Status(var value: String) {
     SAFE_CELL(SAFE),
     MARKED_MINE(MARKER),
     REVEALED_MINE(MINE),
-    MINE_ADJ_CELL("")
+    MINE_ADJ_CELL(""),
+    MARKED_SAFE(HASH),
+    MASKED(SAFE)
 }
 
 class Minesweeper {
@@ -38,19 +41,22 @@ data class Cell(val row: Int, val col: Int, var status: Status, var adjMines : I
     val grid = List(height){ row -> MutableList<Cell>(width){
         col -> Cell(row + 1, col + 1, Status.SAFE_CELL)}
     }
+    var playerGridKey : List<MutableList<Cell>>? = null
     var playerGrid : List<MutableList<Cell>>? = null
     var won = false
+    var lost = false
+    val traversedCells = mutableSetOf<Cell>()
     fun launchGame() {
         val numMines = promptNumMines()
         createMines(numMines)
         determineNumsOnGrid()
         //printGMGrid()
-        createPlayerGrid()
+        createPlayerGrids()
         printPlayerGrid()
-        while(!won) {
+        while(!won && !lost) {
             promptUser()
         }
-        println("Congratulations! You found all the mines!")
+        if (!lost) println("Congratulations! You found all the mines!")
     }
 
     fun promptUser() {
@@ -58,20 +64,125 @@ data class Cell(val row: Int, val col: Int, var status: Status, var adjMines : I
         val input = readln().split(" ")
         val col = input[0].toInt()
         val row = input[1].toInt()
+        val command = input[2]
         //val currStatus = playerGrid!![row - 1][col - 1].status
-        if (grid[row - 1][col - 1].status == Status.MINE_ADJ_CELL) {
-            println("There is a number here!")
-            return
-        } else {
-            if (playerGrid!![row - 1][col - 1].status != Status.MARKED_MINE) {
-                playerGrid!![row - 1][col - 1].status = Status.MARKED_MINE
+        if (command == "mine") {
+
+            if (grid[row - 1][col - 1].status == Status.MINE_ADJ_CELL) {
+                println("There is a number here!")
+                return
             } else {
-                playerGrid!![row - 1][col - 1].status = Status.SAFE_CELL
+                if (playerGridKey!![row - 1][col - 1].status != Status.MARKED_MINE) {
+                    playerGridKey!![row - 1][col - 1].status = Status.MARKED_MINE
+                } else {
+                    playerGridKey!![row - 1][col - 1].status = Status.SAFE_CELL
+                }
+                printPlayerGrid()
+            }
+            won = checkWinCondition()
+            won = checkWinConditionSafeCells()
+        } else {
+            //command is "free"
+            if (playerGridKey!![row][col].status == Status.HIDDEN_MINE) {
+                println("You stepped on a mine and failed!")
+                lost = true
+            } else if (playerGridKey!![row][col].status == Status.MINE_ADJ_CELL) {
+                playerGrid!![row][col].status = Status.MINE_ADJ_CELL
+            } else if (playerGridKey!![row][col].status == Status.SAFE_CELL) {
+                propagateSafe(row, col)
             }
             printPlayerGrid()
         }
-        won = checkWinCondition()
     }
+
+    //may need a variable holding cells that have been checked
+    //and a function to preface propagateSafe that empties the list of checked cells
+    //or maybe add line to propagate nesting that if MARKED_SAFE return?
+    private fun propagateSafe(inRow: Int, inCol: Int) {
+        if (inRow - 1 < 0) return
+        if (inCol - 1 < 0) return
+        if (inRow > DIMEN ) return
+        if (inCol > DIMEN) return
+        val row = inRow - 1
+        val col = inCol - 1
+        if (traversedCells.contains(playerGrid!![row][col])) return
+        playerGrid!![row][col].status = Status.MARKED_SAFE
+        traversedCells.add(playerGrid!![row][col])
+        if (row - 1 > 0) {
+            if (playerGridKey!![row - 1][col].status == Status.SAFE_CELL) {
+                propagateSafe(row - 1, col)
+            } else if (playerGridKey!![row - 1][col].status == Status.MINE_ADJ_CELL) {
+                playerGrid!![row - 1][col].status = Status.MINE_ADJ_CELL
+            } else {}
+        }
+        if (row - 1 > 0 && col - 1 > 0) {
+            val currCell = playerGridKey!![row - 1][col - 1]
+            if (currCell.status == Status.SAFE_CELL) {
+                propagateSafe(row - 1, col - 1)
+            } else if (currCell.status == Status.MINE_ADJ_CELL) {
+                playerGrid!![row - 1][col - 1].status = Status.MINE_ADJ_CELL
+            } else {}
+        }
+        if (col - 1 > 0) {
+            val currCell = playerGridKey!![row][col - 1]
+            if (currCell.status == Status.SAFE_CELL) {
+                propagateSafe(row, col - 1)
+            } else if (currCell.status == Status.MINE_ADJ_CELL) {
+                playerGrid!![row][col - 1].status = Status.MINE_ADJ_CELL
+            } else {}
+        }
+        if (col - 1 > 0 && row + 1 < DIMEN - 1) {
+            val currCell = playerGridKey!![row + 1][col - 1]
+            if (currCell.status == Status.SAFE_CELL) {
+                propagateSafe(row + 1, col - 1)
+            } else if (currCell.status == Status.MINE_ADJ_CELL) {
+                playerGrid!![row + 1][col - 1].status = Status.MINE_ADJ_CELL
+            } else {}
+        }
+        if (row + 1 < DIMEN - 1) {
+            val currCell = playerGridKey!![row + 1][col]
+            if (currCell.status == Status.SAFE_CELL) {
+                propagateSafe(row + 1, col)
+            } else if (currCell.status == Status.MINE_ADJ_CELL) {
+                playerGrid!![row + 1][col].status = Status.MINE_ADJ_CELL
+            } else {}
+        }
+        if (row + 1 < DIMEN -1 && col + 1 < DIMEN - 1) {
+            val currCell = playerGridKey!![row + 1][col + 1]
+            //if (traversedCells.contains(currCell)) return
+            if (currCell.status == Status.SAFE_CELL) {
+
+                propagateSafe(row + 1, col + 1)
+            } else if (currCell.status == Status.MINE_ADJ_CELL) {
+                playerGrid!![row + 1][col + 1].status = Status.MINE_ADJ_CELL
+            } else {}
+        }
+        if (col + 1 < DIMEN - 1) {
+            val currCell = playerGridKey!![row][col + 1]
+            if (currCell.status == Status.SAFE_CELL) {
+                propagateSafe(row, col + 1)
+            } else if (currCell.status == Status.MINE_ADJ_CELL) {
+                playerGrid!![row][col + 1].status = Status.MINE_ADJ_CELL
+            } else {}
+        }
+        if (col + 1 < DIMEN - 1 && row - 1 > 0) {
+            val currCell = playerGridKey!![row - 1][col + 1]
+            if (currCell.status == Status.SAFE_CELL) {
+                propagateSafe(row - 1, col + 1)
+            } else if (currCell.status == Status.MINE_ADJ_CELL) {
+                playerGrid!![row - 1][col + 1].status = Status.MINE_ADJ_CELL
+            } else {}
+        }
+    }
+
+    private fun checkWinConditionSafeCells(): Boolean {
+        if (playerGridKey!!.flatten().count() - playerGridKey!!.flatten().filter {
+            it.status == Status.MINE_ADJ_CELL || it.status == Status.HIDDEN_MINE }.count()
+            == playerGrid!!.flatten().filter { it.status == Status.MARKED_SAFE}.count()
+            ) return true
+        return false
+    }
+
     fun promptNumMines(): Int {
         println("How many mines do you want on the field?")
         return readln().toInt()
@@ -169,15 +280,23 @@ data class Cell(val row: Int, val col: Int, var status: Status, var adjMines : I
             }
         }
     }
-    fun createPlayerGrid(){
-        playerGrid = grid.map { row ->
+    fun createPlayerGrids(){
+        playerGridKey = grid.map { row ->
             row.map {
                 it.copy()
             }.toMutableList()
         }
         //printPlayerGrid()
-        playerGrid!!.forEach { it.forEach {
+        playerGridKey!!.forEach { it.forEach {
             if (it.status == Status.REVEALED_MINE) {it.status = Status.HIDDEN_MINE}
+        }}
+        playerGrid = grid.map { row ->
+            row.map {
+                it.copy()
+            }.toMutableList()
+        }
+        playerGrid!!.forEach { it.forEach {
+            it.status = Status.MASKED
         }}
         //printPlayerGrid()
         //printGMGrid()
@@ -188,8 +307,17 @@ data class Cell(val row: Int, val col: Int, var status: Status, var adjMines : I
             println(row.joinToString(""))
         }
     }
-    fun printPlayerGrid() {
+    fun printPlayerGridKey() {
         //playerGrid!!.forEach {it.forEach { println( "${it.status.value} ${it.col} ${it.row}")} }
+        println(" |123456789|")
+        println("-|---------|")
+        for ((i,row) in playerGridKey!!.withIndex()) {
+            println("${i+1}|${row.joinToString("")}|")
+        }
+        println("-|---------|")
+    }
+
+    fun printPlayerGrid() {
         println(" |123456789|")
         println("-|---------|")
         for ((i,row) in playerGrid!!.withIndex()) {
@@ -201,7 +329,7 @@ data class Cell(val row: Int, val col: Int, var status: Status, var adjMines : I
     fun checkWinCondition(): Boolean {
         val allMines = grid.flatten().filter { it.status == Status.REVEALED_MINE}
         // println(allMines)
-        val markedMines = playerGrid!!.flatten().filter { it.status == Status.MARKED_MINE }
+        val markedMines = playerGridKey!!.flatten().filter { it.status == Status.MARKED_MINE }
         // println(markedMines)
         if (allMines.count() != markedMines.count()) return false
         val allCoords = allMines.map { it.col to it.row}
