@@ -83,13 +83,13 @@ data class Cell(val row: Int, val col: Int, var status: Status, var adjMines : I
             won = checkWinConditionSafeCells()
         } else {
             //command is "free"
-            if (playerGridKey!![row][col].status == Status.HIDDEN_MINE) {
+            if (playerGridKey!![row - 1][col - 1].status == Status.HIDDEN_MINE) {
                 println("You stepped on a mine and failed!")
                 lost = true
-            } else if (playerGridKey!![row][col].status == Status.MINE_ADJ_CELL) {
-                playerGrid!![row][col].status = Status.MINE_ADJ_CELL
-            } else if (playerGridKey!![row][col].status == Status.SAFE_CELL) {
-                propagateSafe(row, col)
+            } else if (playerGridKey!![row - 1][col - 1].status == Status.MINE_ADJ_CELL) {
+                playerGrid!![row - 1][col - 1].status = Status.MINE_ADJ_CELL
+            } else if (playerGridKey!![row - 1][col - 1].status == Status.SAFE_CELL) {
+                propagateSafe(row - 1, col - 1)
             }
             printPlayerGrid()
         }
@@ -98,24 +98,24 @@ data class Cell(val row: Int, val col: Int, var status: Status, var adjMines : I
     //may need a variable holding cells that have been checked
     //and a function to preface propagateSafe that empties the list of checked cells
     //or maybe add line to propagate nesting that if MARKED_SAFE return?
-    private fun propagateSafe(inRow: Int, inCol: Int) {
-        if (inRow - 1 < 0) return
-        if (inCol - 1 < 0) return
-        if (inRow > DIMEN ) return
-        if (inCol > DIMEN) return
-        val row = inRow - 1
-        val col = inCol - 1
+    private fun propagateSafe(row: Int, col: Int) {
+//        if (inRow - 1 < 0) return
+//        if (inCol - 1 < 0) return
+//        if (inRow > DIMEN ) return
+//        if (inCol > DIMEN) return
+//        val row = inRow - 1
+//        val col = inCol - 1
         if (traversedCells.contains(playerGrid!![row][col])) return
         playerGrid!![row][col].status = Status.MARKED_SAFE
         traversedCells.add(playerGrid!![row][col])
-        if (row - 1 > 0) {
+        if (row - 1 >= 0) {
             if (playerGridKey!![row - 1][col].status == Status.SAFE_CELL) {
                 propagateSafe(row - 1, col)
             } else if (playerGridKey!![row - 1][col].status == Status.MINE_ADJ_CELL) {
                 playerGrid!![row - 1][col].status = Status.MINE_ADJ_CELL
             } else {}
         }
-        if (row - 1 > 0 && col - 1 > 0) {
+        if (row - 1 >= 0 && col - 1 >= 0) {
             val currCell = playerGridKey!![row - 1][col - 1]
             if (currCell.status == Status.SAFE_CELL) {
                 propagateSafe(row - 1, col - 1)
@@ -123,7 +123,7 @@ data class Cell(val row: Int, val col: Int, var status: Status, var adjMines : I
                 playerGrid!![row - 1][col - 1].status = Status.MINE_ADJ_CELL
             } else {}
         }
-        if (col - 1 > 0) {
+        if (col - 1 >= 0) {
             val currCell = playerGridKey!![row][col - 1]
             if (currCell.status == Status.SAFE_CELL) {
                 propagateSafe(row, col - 1)
@@ -131,7 +131,7 @@ data class Cell(val row: Int, val col: Int, var status: Status, var adjMines : I
                 playerGrid!![row][col - 1].status = Status.MINE_ADJ_CELL
             } else {}
         }
-        if (col - 1 > 0 && row + 1 < DIMEN - 1) {
+        if (col - 1 >= 0 && row + 1 <= DIMEN - 1) {
             val currCell = playerGridKey!![row + 1][col - 1]
             if (currCell.status == Status.SAFE_CELL) {
                 propagateSafe(row + 1, col - 1)
@@ -139,7 +139,7 @@ data class Cell(val row: Int, val col: Int, var status: Status, var adjMines : I
                 playerGrid!![row + 1][col - 1].status = Status.MINE_ADJ_CELL
             } else {}
         }
-        if (row + 1 < DIMEN - 1) {
+        if (row + 1 <= DIMEN - 1) {
             val currCell = playerGridKey!![row + 1][col]
             if (currCell.status == Status.SAFE_CELL) {
                 propagateSafe(row + 1, col)
@@ -147,7 +147,7 @@ data class Cell(val row: Int, val col: Int, var status: Status, var adjMines : I
                 playerGrid!![row + 1][col].status = Status.MINE_ADJ_CELL
             } else {}
         }
-        if (row + 1 < DIMEN -1 && col + 1 < DIMEN - 1) {
+        if (row + 1 <= DIMEN -1 && col + 1 <= DIMEN - 1) {
             val currCell = playerGridKey!![row + 1][col + 1]
             //if (traversedCells.contains(currCell)) return
             if (currCell.status == Status.SAFE_CELL) {
@@ -157,7 +157,7 @@ data class Cell(val row: Int, val col: Int, var status: Status, var adjMines : I
                 playerGrid!![row + 1][col + 1].status = Status.MINE_ADJ_CELL
             } else {}
         }
-        if (col + 1 < DIMEN - 1) {
+        if (col + 1 <= DIMEN - 1) {
             val currCell = playerGridKey!![row][col + 1]
             if (currCell.status == Status.SAFE_CELL) {
                 propagateSafe(row, col + 1)
@@ -165,7 +165,7 @@ data class Cell(val row: Int, val col: Int, var status: Status, var adjMines : I
                 playerGrid!![row][col + 1].status = Status.MINE_ADJ_CELL
             } else {}
         }
-        if (col + 1 < DIMEN - 1 && row - 1 > 0) {
+        if (col + 1 <= DIMEN - 1 && row - 1 >= 0) {
             val currCell = playerGridKey!![row - 1][col + 1]
             if (currCell.status == Status.SAFE_CELL) {
                 propagateSafe(row - 1, col + 1)
