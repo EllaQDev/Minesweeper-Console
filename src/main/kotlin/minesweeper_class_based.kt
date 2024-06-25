@@ -68,14 +68,15 @@ data class Cell(val row: Int, val col: Int, var status: Status, var adjMines : I
         //val currStatus = playerGrid!![row - 1][col - 1].status
         if (command == "mine") {
 
-            if (grid[row - 1][col - 1].status == Status.MINE_ADJ_CELL) {
+            if (playerGrid!![row - 1][col - 1].status == Status.MINE_ADJ_CELL) {
                 println("There is a number here!")
+                printPlayerGrid()
                 return
             } else {
-                if (playerGridKey!![row - 1][col - 1].status != Status.MARKED_MINE) {
-                    playerGridKey!![row - 1][col - 1].status = Status.MARKED_MINE
+                if (playerGrid!![row - 1][col - 1].status != Status.MARKED_MINE) {
+                    playerGrid!![row - 1][col - 1].status = Status.MARKED_MINE
                 } else {
-                    playerGridKey!![row - 1][col - 1].status = Status.SAFE_CELL
+                    playerGrid!![row - 1][col - 1].status = Status.SAFE_CELL
                 }
                 printPlayerGrid()
             }
@@ -91,6 +92,7 @@ data class Cell(val row: Int, val col: Int, var status: Status, var adjMines : I
             } else if (playerGridKey!![row - 1][col - 1].status == Status.SAFE_CELL) {
                 propagateSafe(row - 1, col - 1)
             }
+            won = checkWinConditionSafeCells()
             printPlayerGrid()
         }
     }
@@ -176,8 +178,9 @@ data class Cell(val row: Int, val col: Int, var status: Status, var adjMines : I
     }
 
     private fun checkWinConditionSafeCells(): Boolean {
-        if (playerGridKey!!.flatten().count() - playerGridKey!!.flatten().filter {
-            it.status == Status.MINE_ADJ_CELL || it.status == Status.HIDDEN_MINE }.count()
+        if (playerGridKey!!.flatten().count() - playerGridKey!!.flatten().count {
+                it.status == Status.MINE_ADJ_CELL || it.status == Status.HIDDEN_MINE
+            }
             == playerGrid!!.flatten().filter { it.status == Status.MARKED_SAFE}.count()
             ) return true
         return false
